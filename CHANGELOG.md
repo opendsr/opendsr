@@ -18,4 +18,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - init commit
 - add README (empty)
-- add CODE_OF_CONDUCT (empty)
+- add CODE_OF_CONDUCT
