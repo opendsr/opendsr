@@ -14,4 +14,4 @@ The openDSR API is a RESTful API that allows energy providers to manage DSR prog
 To start using the openDSR standard in your projects, refer to the [API Documentation](/) for a comprehensive guide on endpoints, request/response formats, and authentication methods.
 
 ## Contributing
-We encourage contributions from the open-source community. If you have suggestions, bug reports, or would like to contribute to the development of the openDSR standard, please follow our [Contribution Guidelines](./CONTRIBUTION.md).
+We encourage contributions from the open-source community. If you have suggestions, bug reports, or would like to contribute to the development of the openDSR standard, please follow our [Contribution Guidelines](./CONTRIBUTING.md).
