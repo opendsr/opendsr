@@ -1,0 +1,644 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "OpenDSR API",
+    "description": "The OpenDSR API allows aggregators to integrate their systems with intelligent EVSE chargers and home energy appliance tools. By using this API, energy providers can access and manage devices, monitor usage, and send commands to control charging schedules and load.",
+    "version": "0.2.0"
+  },
+  "servers": [{ "url": "https://opendsr.net" }],
+  "paths": {
+    "/devices": {
+      "get": {
+        "operationId": "getDevices",
+        "security": [{ "Authorization": [] }],
+        "parameters": [],
+        "description": "This endpoint retrieves a comprehensive list of devices associated with the authenticated user's account. The response includes essential device information such as ID, type, model, and status, giving users a clear overview of their devices' details and current state. It serves as a starting point for third parties to manage and interact with users' devices through other API endpoints.
+        This API now includes site-based segregation, allowing users to manage their devices more effectively when they have devices across multiple sites. Each site has its own ID, name, and optional grid limit, and the devices within the site are listed under the site details.",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sites": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "siteId": { "type": "string" },
+                          "name": { "type": "string", "default": "" },
+                          "gridLimit": { "type": "number", "default": 0 },
+                          "devices": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "deviceId": { "type": "string" },
+                                "deviceType": { "type": "string" },
+                                "model": { "type": "string" },
+                                "description": { "type": "string" },
+                                "alias": { "type": "string", "default": "" },
+                                "powerLimit": { "type": "number" },
+                                "status": { "type": "string" }
+                              },
+                              "required": [
+                                "deviceId",
+                                "deviceType",
+                                "model",
+                                "description",
+                                "powerLimit",
+                                "status"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": ["siteId", "devices", "description"],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": ["sites"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/error" },
+        }
+      }
+    },
+    "/devices/{id}/status": {
+      "get": {
+        "description": "Retrieves the latest telemetry data for a specific device, providing a comprehensive snapshot of its current status, power usage, and other relevant information. This allows 3rd parties to closely monitor and understand the performance and behaviour of a user’s device, enabling more effective management and decision-making regarding their energy usage.",
+        "operationId": "getStatus",
+        "security": [{ "Authorization": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "timestamp": {
+                      "anyOf": [
+                        { "type": "string", "format": "date-time" },
+                        { "type": "string" }
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["active", "inactive", "faulted", "unknown"]
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "no_vehicle",
+                        "waiting_for_surplus",
+                        "charging",
+                        "complete",
+                        "faulted",
+                        "other"
+                      ]
+                    },
+                    "supplyMode": {
+                      "type": "string",
+                      "enum": ["eco", "eco+", "fast", "stop"]
+                    },
+                    "averagePower": { "type": "number" },
+                    "boostCharge": { "type": "boolean" },
+                    "faultType": {
+                      "type": "string",
+                      "enum": [
+                        "connector_lock_failure",
+                        "ground_failure",
+                        "power_switch_failure",
+                        "over_current_failure",
+                        "over_voltage",
+                        "other_error"
+                      ]
+                    },
+                    "actualPower": { "type": "number" },
+                    "gridPower": { "type": "number" },
+                    "genPower": { "type": "number" },
+                    "interval": { "type": "integer" },
+                    "energyDelivered": { "type": "number" },
+                    "sessionEnergy": { "type": "number" }
+                  },
+                  "required": [
+                    "timestamp",
+                    "status",
+                    "state",
+                    "supplyMode",
+                    "boostCharge",
+                    "actualPower",
+                    "gridPower",
+                    "genPower",
+                    "interval",
+                    "energyDelivered",
+                    "sessionEnergy"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/error" }
+        }
+      }
+    },
+    "/devices/{id}/mode": {
+      "post": {
+        "description": "Allows users to change the energy supply mode for a specific device. The available modes include green-preferred, green-only, schedule, and fast. Each mode represents a different charging strategy, providing flexibility to the device's energy usage. This functionality enables users to optimize their energy usage according to their needs, environmental considerations, or cost-saving strategies.",
+        "operationId": "changeDeviceSupplyMode",
+        "security": [{ "Authorization": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "supplyMode": {
+                    "type": "string",
+                    "enum": ["green-preferred" , "green-only" , "fast" , "stop"],
+                  }
+                },
+                "required": ["supplyMode"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "message": { "type": "string" } },
+                  "required": ["message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/error" }
+        }
+      }
+    },
+    "/devices/{id}/boost": {
+      "post": {
+        "operationId": "sendBoost",
+        "security": [{ "Authorization": [] }],
+        "description": "Sends a charge command to the specified device to initiate a charging process. The charging process can be set to either normal or smart mode, with optional parameters for a target time and energy amount. The chargeDelayOverride property is available for specific energy suppliers that have obtained an exemption, allowing them to bypass smart energy regulation delays.
+
+
+        **Difference between the boost modes: A normal boost initiates a charge immediately, charging the device from any available energy source, prioritizing green energy and supplementing with grid power until the max charge limit. A smart boost aims to charge the plugged-in device with green energy until the target time, using grid power only when necessary to achieve the desired energy amount by the target time.**
+
+
+        *Important note on the chargeDelayOverride property: This property is only available for specific energy suppliers who have provided an exemption letter confirming they can be trusted to bypass smart energy regulation delays safely. It is crucial to ensure that only authorized parties have access to this functionality to maintain compliance with energy regulations and ensure the system's safe operation.*
+        ",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": { "type": "string", "enum": ["normal", "smart"] },
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "targetTime": { "type": "string" },
+                      "energy": { "type": "number" }
+                    },
+                    "required": ["energy"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["mode", "parameters"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "message": { "type": "string" } },
+                  "required": ["message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/error" }
+        }
+      },
+      "delete": {
+        "operationId": "sendCancelBoost",
+        "security": [{ "Authorization": [] }],
+        "description": "Allows 3rd parties to send a cancel boost command to the specified device, effectively stopping the charging process initiated by the previous charge command. It is useful in situations where the 3rd party needs to terminate the ongoing charging process due to changes in energy requirements or availability.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "id": { "type": "string" } },
+                  "required": ["message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/error" }
+        }
+      }
+    },
+    "/devices/{id}/schedule": {
+      "get": {
+        "operationId": "getSchedule",
+        "security": [{ "Authorization": [] }],
+        "description": "Allows 3rd parties to retrieve a charging schedule for a specific device. This capability is crucial for managing energy usage effectively according to the user's needs and preferences. The request should include the schedule details, such as start time, end time, and the amount of energy to be delivered during the charging period, which enables a tailored and efficient charging experience.
+
+
+        The request may also include a chargeDelayOverride flag. When set to true, this optional flag allows authorized energy suppliers to override the random charge delay required by energy regulations. This functionality, which is strictly limited to parties who have been granted the necessary permissions, can be used to optimize charging schedules and manage grid load more effectively while still adhering to all regulatory requirements.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "schedule": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "startTime": {
+                            "type": "string",
+                          },
+                          "endTime": {
+                            "type": "string",
+                          },
+                          "energy": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1440
+                          }
+                        },
+                        "required": [
+                          "startTime",
+                          "endTime",
+                          "startMinute"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1,
+                      "maxItems": 4
+                    }
+                  },
+                  "required": ["schedule"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/error" }
+        }
+      },
+      "post": {
+        "operationId": "createSchedule",
+        "security": [{ "Authorization": [] }],
+        "description": "allows 3rd parties to set a charging schedule for a specific device. This capability is crucial for managing energy usage effectively according to the user's needs and preferences. The request should include the schedule details, such as start time, end time, and the amount of energy to be delivered during the charging period, which enables a tailored and efficient charging experience.
+
+
+        The request may also include a chargeDelayOverride flag. When set to true, this optional flag allows authorized energy suppliers to override the random charge delay required by energy regulations. This functionality, which is strictly limited to parties who have been granted the necessary permissions, can be used to optimize charging schedules and manage grid load more effectively while still adhering to all regulatory requirements.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "schedule": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "scheduleOverride": {
+                          "type": "boolean",
+                        },
+                        "schedule": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "startTime": {
+                                "type": "string",
+                              },
+                              "endTime": {
+                                "type": "string",
+                              },
+                              "energy": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1440
+                              }
+                            },
+                            "required": [
+                              "startTime",
+                              "endTime",
+                              "startMinute"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "minItems": 1,
+                          "maxItems": 4
+                        }
+                      },
+                      "required": [
+                        "days",
+                        "startHour",
+                        "startMinute",
+                        "duration"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 4
+                  }
+                },
+                "required": ["schedule"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "message": { "type": "string" } },
+                  "required": ["message"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/error" }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSchedule",
+        "security": [{ "Authorization": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "id": { "type": "string" } },
+                  "required": ["id"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/error" }
+        }
+      }
+    },
+    "/webhooks": {
+      "get": {
+        "operationId": "getWebhooks",
+        "security": [{ "Authorization": [] }],
+        "description": "Retrieves a list of all active webhook subscriptions, providing 3rd parties with an overview of their current event monitoring setup. The response will include essential webhook information such as webhook ID, event type, webhook URL, and associated device ID, allowing 3rd parties to manage and track their webhook subscriptions effectively.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "required": true,
+            "description": "Retrieves a list of all active webhook subscriptions, providing 3rd parties with an overview of their current event monitoring setup. The response will include essential webhook information such as webhook ID, event type, webhook URL, and associated device ID, allowing 3rd parties to manage and track their webhook subscriptions effectively.",
+
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "webhookId": { "type": "string" },
+                      "eventType": {
+                        "type": "string",
+                        "enum": ["status_change", "telemetry", "device_change"]
+                      },
+                      "endpoint": { "type": "string", "format": "uri" },
+                      "deviceId": { "type": "string" },
+                    },
+                    "required": ["webhookId", "eventType", "endpoint"],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/error" }
+        }
+      }
+    },
+    "/webhooks/{webhookId}": {
+      "delete": {
+        "operationId": "deleteWebhook",
+        "security": [{ "Authorization": [] }],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "required": true,
+            "description": "Allows 3rd parties to unsubscribe from an active webhook, allowing them to stop receiving notifications for specific events when they are no longer needed or desired. Unsubscribing from a webhook can be useful when a 3rd party wants to reduce the number of notifications they receive or when monitoring certain events is no longer necessary.",
+          },
+          {
+            "name": "webhookId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "webhookId": { "type": "string" },
+                    "eventType": {
+                      "type": "string",
+                      "enum": ["status_change", "telemetry"]
+                    },
+                    "endpoint": { "type": "string", "format": "uri" }
+                  },
+                  "required": ["webhookId", "eventType", "endpoint"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/error" }
+        }
+      }
+    },
+    "/webhooks/subscribe": {
+      "post": {
+        "operationId": "subscribeWebhook",
+        "security": [{ "Authorization": [] }],
+        "description": "Subscribe to specific events related to devices in order to receive real-time updates and notifications. This endpoint enables 3rd parties to monitor users' devices more effectively by receiving timely notifications whenever an event of interest, such as a state change or telemetry update, occurs. When an event is triggered, the webhook notification will be sent to the specified endpoint.",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "required": true,
+            "description": "Allows 3rd parties to unsubscribe from an active webhook, allowing them to stop receiving notifications for specific events when they are no longer needed or desired. Unsubscribing from a webhook can be useful when a 3rd party wants to reduce the number of notifications they receive or when monitoring certain events is no longer necessary.",
+          },
+          {
+            "name": "webhookId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deviceId": { "type": "string" },
+                    "eventType": {
+                      "type": "string",
+                      "enum": ["status_change", "telemetry"]
+                    },
+                    "endpoint": { "type": "string", "format": "uri" }
+                  },
+                  "required": ["deviceId", "eventType", "endpoint"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/error" }
+        }
+      }
+    },
+  },
+  "components": {
+    "securitySchemes": {
+      "Authorization": { "type": "http", "scheme": "bearer" }
+    },
+    "responses": {
+      "error": {
+        "description": "Error response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": { "type": "string" },
+                "code": { "type": "string" },
+                "issues": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": { "message": { "type": "string" } },
+                    "required": ["message"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["message", "code"],
+              "additionalProperties": false
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [{ "name": "webhook" }]
+}
