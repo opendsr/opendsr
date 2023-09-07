@@ -111,7 +111,7 @@
           "Device Management"
         ],
         "summary": "Send Charge Commands",
-        "description": "This endpoint allows 3rd parties to execute various commands on a specific device. The **`commandType`** field in the request body will define the type of command to be executed. To start charging a specific device, the request should include the **`commandType`** as 'START_CHARGING' and specify the amount of energy to be delivered during the charging period. This allows for precise control when activating a particular device for charging. For added flexibility, the request can also include an optional 'chargeDuration' parameter. When provided, this parameter specifies the intended duration for the charging session, allowing energy providers to optimize the delivery of energy based on the duration and the energy amount.",
+        "description": "This endpoint allows 3rd parties to execute various commands on a specific device. The **`commandType`** field in the request body will define the type of command to be executed. <br><br> To start charging a specific device, the request should include the **`commandType`** as 'START_CHARGING' and specify the amount of energy to be delivered during the charging period. This allows for precise control when activating a particular device for charging. <br><br> For added flexibility, the request can also include an optional 'chargeDuration' parameter. When provided, this parameter specifies the intended duration for the charging session, allowing energy providers to optimize the delivery of energy based on the duration and the energy amount.",
         "consumes": [
           "multipart/form-data"
         ],
@@ -289,80 +289,6 @@
         }
       }
     },
-    "/devices/{id}/boost": {
-      "post": {
-        "tags": [
-          "Device Management"
-        ],
-        "summary": "Sending a Charge Command",
-        "description": "This endpoint sends a charge command to the specified device to initiate a charging process. The charging process can be set to either normal or smart mode, with optional parameters for a target time and energy amount. The chargeDelayOverride property is available for specific energy suppliers that have obtained an exemption, allowing them to bypass smart energy regulation delays. Difference between the boost modes: A normal boost initiates a charge immediately, charging the device from any available energy source, prioritizing green energy and supplementing with grid power until the max charge limit. A smart boost aims to charge the plugged-in device with green energy until the target time, using grid power only when necessary to achieve the desired energy amount by the target time.Important note on the chargeDelayOverride property: This property is only available for specific energy suppliers who have provided an exemption letter confirming they can be trusted to bypass smart energy regulation delays safely. It is crucial to ensure that only authorized parties have access to this functionality to maintain compliance with energy regulations and ensure the system's safe operation.",
-        "consumes": [
-          "multipart/form-data"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Device ID of the specific device.",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "Charge parameters",
-            "in": "body",
-            "description": "Body Parameters",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/deviceBoostParameters"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Device Management"
-        ],
-        "summary": "Sending a Cancel Boost Command",
-        "description": "This endpoint allows 3rd parties to send a cancel boost command to the specified device, effectively stopping the charging process initiated by the previous charge command. It is useful in situations where the 3rd party needs to terminate the ongoing charging process due to changes in energy requirements or availability.",
-        "consumes": [
-          "multipart/form-data"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "Device ID of the specific device.",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "Charge parameters",
-            "in": "body",
-            "description": "Body Parameters",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/deviceBoostParameters"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation"
-          }
-        }
-      }
-    },
     "/devices/{id}/schedule": {
       "get": {
         "tags": [
@@ -428,7 +354,7 @@
           "Webhooks"
         ],
         "summary": "Webhook subscription",
-        "description": "This endpoint enables 3rd parties to halt the charging of a specific device immediately. This allows for effective management of energy usage and operational flexibility in scenarios where an ongoing charging session needs to be terminated prematurely.",
+        "description": "Subscribe to specific events related to devices in order to receive real-time updates and notifications. This endpoint enables 3rd parties to monitor users' devices more effectively by receiving timely notifications whenever an event of interest, such as a state change or telemetry update, occurs. When an event is triggered, the webhook notification will be sent to the specified endpoint.",
         "consumes": [
           "multipart/form-data"
         ],
@@ -611,9 +537,11 @@
           "200": {
             "description": "OK",
             "schema": {
+              "required": ["locations"],
               "properties": {
                 "locations": {
                   "type": "object",
+                  "required": ["locationId", "name"],
                   "properties": {
                     "locationId": {
                       "type": "string",
@@ -665,13 +593,16 @@
               ],
               "properties": {
                 "name": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Custom name given to the location by the user, allowing for easy identification and management"
                 },
                 "gridLimit": {
-                  "type": "number"
+                  "type": "number",
+                  "description": "The maximum power that can be delivered through the grid in watts (W)"
                 },
                 "devices": {
                   "type": "array",
+                  "description": "The devices that's belongs under that location",
                   "items": {
                     "type": "string"
                   }
@@ -685,17 +616,24 @@
             "description": "Created",
             "schema": {
               "properties": {
-                "locations": {
-                  "type": "object",
-                  "properties": {
-                    "locationId": {
-                      "type": "string",
-                      "description": "Unique identifier for each location"
-                    }
-                  }
+                "locationId": {
+                  "type": "string",
+                  "description": "Unique identifier for each location"
                 }
               }
             }
+          },
+          "400": {
+            "description": "The request parameters or body were invalid or missing."
+          },
+          "401": {
+            "description": "The user is not authenticated."
+          },
+          "403": {
+            "description": "The user does not have permission to create a location."
+          },
+          "500": {
+            "description": "An error occurred on the server."
           }
         }
       }
@@ -706,7 +644,7 @@
           "Locations"
         ],
         "summary": "Get Location",
-        "description": "By sending a GET request to this endpoint with the desired location ID, users can retrieve the location's details, including its name, grid limit (if applicable), and the devices associated with the location. **Description**: This endpoint allows users to retrieve a specific location based on the provided location ID. The location represents a grouping of devices associated with a specific area, enabling users to organize and manage their devices effectively, especially when they have devices across multiple locations.",
+        "description": "This endpoint allows users to retrieve a specific location based on the provided location ID. The location represents a grouping of devices associated with a specific area, enabling users to organize and manage their devices effectively, especially when they have devices across multiple locations.",
         "consumes": [
           "multipart/form-data"
         ],
@@ -748,6 +686,18 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "The user is not authenticated."
+          },
+          "403": {
+            "description": "The user does not have permission to access the location."
+          },
+          "404": {
+            "description": "The specified location ID does not exist."
+          },
+          "500": {
+            "description": "An error occurred on the server"
           }
         }
       },
@@ -756,7 +706,7 @@
           "Locations"
         ],
         "summary": "Get Location",
-        "description": "By sending a PUT request to this endpoint with the desired updates, users can modify the specified location's name, grid limit, and associated devices. The **`locationId`** parameter in the endpoint path should be replaced with the unique identifier of the location that needs to be updated. **Description**: This endpoint allows users to update an existing location. The location represents a grouping of devices associated with a specific area, enabling users to organize and manage their devices effectively, especially when they have devices across multiple locations.",
+        "description": "This endpoint allows users to update an existing location. The location represents a grouping of devices associated with a specific area, enabling users to organize and manage their devices effectively, especially when they have devices across multiple locations.",
         "consumes": [
           "multipart/form-data"
         ],
@@ -806,6 +756,21 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "The request parameters or body were invalid or missing."
+          },
+          "401": {
+            "description": "The user is not authenticated."
+          },
+          "403": {
+            "description": "The user does not have permission to update the location."
+          },
+          "404": {
+            "description": "The specified location ID does not exist."
+          },
+          "500": {
+            "description": "An error occurred on the server."
           }
         }
       },
@@ -875,9 +840,14 @@
             "name": "Body",
             "description": "Body Parameters",
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
+              "properties": {
+                "devices": {
+                  "type": "array",
+                  "description": "The devices that's should be removed from that location",
+                  "items": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
@@ -928,9 +898,14 @@
             "name": "Body",
             "description": "Body Parameters",
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
+              "properties": {
+                "devices": {
+                  "type": "array",
+                  "description": "The devices that's should be removed from that location",
+                  "items": {
+                    "type": "string"
+                  }
+                }
               }
             }
           }
@@ -1017,7 +992,7 @@
           "Locations"
         ],
         "summary": "Send Charge Commands",
-        "description": "This endpoint allows 3rd parties to execute various commands at a specific location. The commandType field in the request body will define the type of command to be executed.",
+        "description": "This endpoint allows 3rd parties to execute various commands at a specific location. The commandType field in the request body will define the type of command to be executed. <br><br>  ### Commands  ",
         "consumes": [
           "multipart/form-data"
         ],
@@ -1098,60 +1073,6 @@
           },
           "404": {
             "description": "The specified location ID or one or more device IDs do not exist."
-          },
-          "500": {
-            "description": "An error occurred on the server."
-          }
-        }
-      },
-      "get": {
-        "tags": [
-          "Locations"
-        ],
-        "summary": "Get Location devices",
-        "description": "This endpoint retrieves the list of devices associated with a specific location identified by the provided location ID. The response includes essential device information such as ID, type, model, and status, giving users a clear overview of the devices' details and current state within the specified location.",
-        "consumes": [
-          "multipart/form-data"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "parameters": [
-          {
-            "in": "path",
-            "name": "locationId",
-            "description": "Id of the specified location",
-            "type": "string",
-            "required": true
-          },
-          {
-            "in": "body",
-            "name": "Body",
-            "description": "Body Parameters",
-            "schema": {
-              "properties": {
-                "devices": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/definitions/device"
-                  }
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The list of devices associated with the specified location was successfully retrieved."
-          },
-          "401": {
-            "description": "The user is not authenticated."
-          },
-          "403": {
-            "description": "The user does not have permission to access devices for the location."
-          },
-          "404": {
-            "description": "The specified location ID does not exist."
           },
           "500": {
             "description": "An error occurred on the server."
@@ -1506,27 +1427,33 @@
   "definitions": {
     "site": {
       "type": "object",
+      "required": ["siteId", "name", "devices", "deviceId", "deviceType", "vendor","model","description","alias","status"],
       "properties": {
         "sites": {
           "type": "object",
           "properties": {
             "siteId": {
-              "type": "string"
+              "type": "string",
+              "description": "Unique identifier for each site"
             },
             "name": {
-              "type": "string"
+              "type": "string",
+              "description": "Custom name given to the site by the user, allowing for easy identification and management"
             },
             "gridLimit?": {
-              "type": "number"
+              "type": "number",
+              "description": "The maximum power that can be delivered through the grid in watts (W)"
             },
             "devices": {
               "type": "object",
               "properties": {
                 "deviceId": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Unique ID for each device"
                 },
                 "deviceType": {
                   "type": "string",
+                  "description": "Type of the device, such as vehicle charger, energy diverter, battery, or other",
                   "enum": [
                     "vehicle_charger",
                     "diverter",
@@ -1537,22 +1464,33 @@
                   ]
                 },
                 "vendor": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "The OEM which created the device"
                 },
                 "model": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Specific product model corresponding to the device type and vendor"
                 },
                 "description": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "A brief description of the device, such as its features or purpose"
                 },
                 "alias": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Custom name given to the device by the user, allowing for easy identification and management"
                 },
                 "status": {
-                  "$ref": "#/definitions/deviceStatus"
+                  "type": "string",
+                  "description": "Current operational status of the device: active (operating normally), inactive (not in use or turned off), or faulted (malfunctioning or error state)",
+                  "enum": [
+                    "active",
+                    "inactive",
+                    "faulted"
+                  ]
                 },
                 "powerLimit": {
-                  "type": "number"
+                  "type": "number",
+                  "description": "(Optional) The maximum power limit a user has set for the device in watts (W)"
                 }
               }
             }
@@ -1564,10 +1502,12 @@
       "type": "object",
       "properties": {
         "deviceId": {
-          "type": "string"
+          "type": "string",
+          "description": "Unique ID for each device"
         },
         "deviceType": {
           "type": "string",
+          "description": "Type of the device, such as vehicle charger, energy diverter, battery, or other",
           "enum": [
             "vehicle_charger",
             "diverter",
@@ -1578,22 +1518,27 @@
           ]
         },
         "vendor": {
-          "type": "string"
+          "type": "string",
+          "description": "The OEM which created the device"
         },
         "model": {
-          "type": "string"
+          "type": "string",
+          "description": "Specific product model corresponding to the device type and vendor"
         },
         "description": {
-          "type": "string"
+          "type": "string",
+          "description": "A brief description of the device, such as its features or purpose"
         },
         "alias": {
-          "type": "string"
+          "type": "string",
+          "description": "Custom name given to the device by the user, allowing for easy identification and management"
         },
         "status": {
           "$ref": "#/definitions/deviceStatus"
         },
         "powerLimit": {
-          "type": "number"
+          "type": "number",
+          "description": "The maximum power limit a user has set for the device in watts (W)"
         }
       }
     },
@@ -1601,40 +1546,63 @@
       "type": "object",
       "properties": {
         "timestamp": {
-          "type": "string"
+          "type": "string",
+          "description": "Date and time of the data point in ISO-8601 format (e.g., '2023-05-10T14:48:00.000Z')"
         },
         "status": {
-          "$ref": "#/definitions/deviceStatus"
+            "type": "string",
+            "description": "Current operational status of the device: active (operating normally), inactive (not in use or turned off), or faulted (malfunctioning or error state)",
+            "enum": [
+              "active",
+              "inactive",
+              "faulted"
+            ]
         },
         "state": {
-          "$ref": "#/definitions/deviceState"
+            "type": "string",
+            "enum": [
+              "no_vehicle",
+              "waiting_for_surplus",
+              "charging",
+              "complete",
+              "faulted"
+            ],
+            "description": "Current state of the charging process: no vehicle connected, waiting for surplus energy, actively charging, charge complete, or faulted"
         },
         "supplyMode": {
-          "$ref": "#/definitions/deviceSupplyMode"
+            "$ref": "#/definitions/deviceSupplyMode"
         },
         "actualPower": {
-          "type": "number"
+          "type": "number",
+          "description": "Actual active power reading at the timestamp in watts (W)"
         },
         "gridPower": {
-          "type": "number"
+          "type": "number",
+          "description": "Active power drawn from the grid in watts (W); can be used to calculate the proportion of green power"
         },
         "averagePower": {
-          "type": "number"
+          "type": "number",
+          "description": "Average of active power over the interval in watts (W)"
         },
         "interval": {
-          "type": "number"
+          "type": "number",
+          "description": "Duration of the interval in seconds that the data point covers"
         },
         "energyDelivered": {
-          "type": "number"
+          "type": "number",
+          "description": "Amount of energy delivered during the interval in watt-hours (Wh)"
         },
         "sessionEnergy": {
-          "type": "number"
+          "type": "number",
+          "description": "Amount of energy delivered to the vehicle since the start of the charging session (when plugged in) in watt-hours (Wh)"
         },
         "boostCharge": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Indicates if the customer has overridden the schedule and is boost charging the battery (true) or following the schedule (false)"
         },
         "faultType": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional property describing the type of fault, if any, affecting the charging process"
         }
       }
     },
@@ -1646,66 +1614,41 @@
         "energy"
       ],
       "properties": {
-        "mode": {
-          "$ref": "#/definitions/deviceChargeMode"
-        },
         "chargeDelayOverride": {
-          "type": "boolean"
+          "type": "boolean",
+          "description": "Indicates if the 3rd party wants to override the random charge delay required by regulations, available only for authorized energy suppliers"
         },
         "schedule": {
           "type": "object",
           "properties": {
             "startTime": {
-              "type": "string"
+              "type": "string",
+              "description": "Start time of the charging period in ISO-8601 date format (e.g., '2023-05-10T14:48:00.000Z')"
             },
             "endTime": {
-              "type": "string"
+              "type": "string",
+              "description": "End time of the charging period in ISO-8601 date format (e.g., '2023-05-10T16:48:00.000Z')"
             },
             "energy": {
-              "type": "number"
+              "type": "number",
+              "description": "Amount of energy to be delivered during the charging period in watt-hours (Wh)"
             }
           }
         }
       }
     },
-    "deviceBoostParameters": {
-      "type": "object",
-      "required": [
-        "mode",
-        "energy"
-      ],
-      "properties": {
-        "mode": {
-          "$ref": "#/definitions/deviceChargeMode"
-        },
-        "parameters": {
-          "$ref": "#/definitions/deviceChargeParameters"
-        },
-        "chargeDelayOverride": {
-          "type": "boolean"
-        }
-      }
-    },
     "deviceStatus": {
       "type": "string",
+      "description": "Current operational status of the device: active (operating normally), inactive (not in use or turned off), or faulted (malfunctioning or error state)",
       "enum": [
         "active",
         "inactive",
         "faulted"
       ]
     },
-    "deviceState": {
-      "type": "string",
-      "enum": [
-        "no_vehicle",
-        "waiting_for_surplus",
-        "charging",
-        "complete",
-        "faulted"
-      ]
-    },
     "deviceSupplyMode": {
       "type": "string",
+      "description": "Mode of energy supply: green-preferred (maximize green energy use), green-only (limit use of grid power), schedule (charge based on user-defined schedule), fast (charge as quickly as possible), or stop (stops all charging)",
       "enum": [
         "green-preferred",
         "green-only",
@@ -1713,45 +1656,6 @@
         "fast",
         "stop"
       ]
-    },
-    "deviceChargeMode": {
-      "type": "string",
-      "enum": [
-        "normal",
-        "smart"
-      ]
-    },
-    "deviceChargeParameters": {
-      "type": "object",
-      "required": [
-        "energy"
-      ],
-      "properties": {
-        "targetTime": {
-          "type": "string",
-          "description": "required when the mode is set to 'smart', represents the desired completion time for the charging process in ISO-8601 format (e.g., 2023-05-10T14:48:00.000Z)"
-        },
-        "energy": {
-          "type": "number",
-          "description": "Amount of energy to be delivered during the charging process in watt-hours (Wh)"
-        }
-      }
-    },
-    "deviceStartChargeParameters": {
-      "type": "object",
-      "required": [
-        "energy"
-      ],
-      "properties": {
-        "energy": {
-          "type": "number",
-          "description": "Amount of energy to be delivered during the charging process in watt-hours (Wh)"
-        },
-        "chargeDuration": {
-          "type": "string",
-          "description": "Optional parameter that indicates the intended duration of the charging session in ISO-8601 date format (e.g., 'PT2H') representing a period of 2 hours"
-        }
-      }
     },
     "subscribeWebhookParameters": {
       "type": "object",
@@ -1870,13 +1774,16 @@
       ],
       "properties": {
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "A custom name given to the location by the user, providing a meaningful and recognizable label."
         },
         "gridLimit": {
-          "type": "number"
+          "type": "number",
+          "description": "Specifies the maximum power limit in watts (W) that can be delivered through the grid to the devices within the location. This parameter helps users manage and control the overall power consumption of the location."
         },
         "devices": {
           "type": "array",
+          "description": "Allows users to associate specific devices with the newly created location. The devices parameter accepts an array of device IDs, enabling users to categorize and group their devices based on their physical location.",
           "items": {
             "type": "string"
           }
