@@ -3,22 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://unpkg.com/@stoplight/elements/web-components.min.js"></script>
-    <link rel="stylesheet" href="./src/style.css" />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/@stoplight/elements/styles.min.css"
-    />
+    <script type="module" src="https://unpkg.com/rapidoc/dist/rapidoc-min.js"></script>
     <title>OpenDSR</title>
   </head>
 
   <body>
-    <div class="docs-content">
-      <elements-api
-        apiDescriptionUrl="./src/document.json"
-        router="hash"
-        layout="sidebar"
-      />
-    </div>
+    <rapi-doc
+        spec-url="./src/opendsr.json"
+        theme="dark"
+        render-style="focused"
+        load-fonts="true"
+        regular-font="Termina,Arial,sans-serif"
+        font-size="large"
+        allow-spec-url-load="false"
+        allow-spec-file-load="false"
+        schema-style="tree"
+      >
+        <img slot="logo" src="./src/apex-logo.svg"></img>
+      </rapi-doc>
   </body>
 </html>

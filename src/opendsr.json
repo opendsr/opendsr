@@ -1,0 +1,1917 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "This document serves as the draft documentation for the OpenDSR API, designed for energy traders, DSOs, aggregators, and energy service providers to manage and interact with different OEMs smart grid-capable devices using a single API. It enables aggregators to effectively manage the devices' load and incorporate Demand Side Response (DSR) strategies to optimize energy usage and cost efficiency.",
+    "version": "0.0.1",
+    "title": "OpenDSR",
+    "contact": {
+      "email": "opendsr@apexlab.io"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "host": "opendsr.org",
+  "basePath": "/v1",
+  "tags": [
+    {
+      "name": "Device Management",
+      "description": "Device management endpoints"
+    },
+    {
+      "name": "Charging Schedules",
+      "description": "Control the charging session for a specific charger."
+    },
+    {
+      "name": "Webhooks",
+      "description": "Webhooks allow you to receive real-time notifications when certain events occur, such as device telemetry updates or device status changes. To use webhooks, you must configure a webhook URL where OpenDSR API will send HTTP POST requests with the event data."
+    },
+    {
+      "name": "Telemetry",
+      "description": "Telemetry data allows users to transmit real-time telemetry data from devices."
+    },
+    {
+      "name": "Locations",
+      "description": "Operations about user"
+    },
+    {
+      "name": "User management",
+      "description": "Operations about user"
+    },
+    {
+      "name": "Error handling",
+      "description": "Operations about user"
+    }
+  ],
+  "schemes": [
+    "https",
+    "http"
+  ],
+  "paths": {
+    "/devices": {
+      "get": {
+        "tags": [
+          "Device Management"
+        ],
+        "summary": "Listing Available User Devices",
+        "description": "This endpoint retrieves a comprehensive list of devices associated with the authenticated user's account. The response includes essential device information such as ID, type, model, and status, giving users a clear overview of their devices' details and current state. It serves as a starting point for third parties to manage and interact with users' devices through other API endpoints. <br><br> This API now includes site-based segregation, allowing users to manage their devices more effectively when they have devices across multiple sites. Each site has its own ID, name, and optional grid limit, and the devices within the site are listed under the site details.",
+        "operationId": "uploadFile",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/site"
+            }
+          }
+        }
+      }
+    },
+    "/devices/{id}/status": {
+      "get": {
+        "tags": [
+          "Device Management"
+        ],
+        "summary": "Retrieving Device Status Data",
+        "description": "This endpoint retrieves the latest telemetry data for a specific device, providing a comprehensive snapshot of its current status, power usage, and other relevant information. This allows 3rd parties to closely monitor and understand the performance and behaviour of a user’s device, enabling more effective management and decision-making regarding their energy usage.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Device ID of the specific device.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/deviceStatusEndpoint"
+            }
+          }
+        }
+      }
+    },
+    "/devices/{deviceId}/commands": {
+      "post": {
+        "tags": [
+          "Device Management"
+        ],
+        "summary": "Send Charge Commands",
+        "description": "This endpoint allows 3rd parties to execute various commands on a specific device. The **`commandType`** field in the request body will define the type of command to be executed. To start charging a specific device, the request should include the **`commandType`** as 'START_CHARGING' and specify the amount of energy to be delivered during the charging period. This allows for precise control when activating a particular device for charging. For added flexibility, the request can also include an optional 'chargeDuration' parameter. When provided, this parameter specifies the intended duration for the charging session, allowing energy providers to optimize the delivery of energy based on the duration and the energy amount.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deviceId",
+            "description": "Id of the specified device",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "body",
+            "name": "Body Parameters",
+            "description": "The unique identifier of the location to be retrieved.",
+            "schema": {
+              "required": [
+                "commandType"
+              ],
+              "properties": {
+                "commandType": {
+                  "type": "string",
+                  "enum": [
+                    "START_CHARGING",
+                    "STOP_CHARGING",
+                    "SET_CHARGING_SCHEDULE",
+                    "CONTROL_HVAC",
+                    "MANAGE_WATER_HEATING",
+                    "MODIFY_THERMOSTAT",
+                    "DEACTIVATE_NON_ESSENTIAL_DEVICE_LOADS",
+                    "USE_SOLAR_POWER",
+                    "USE_BATTERY_STORAGE",
+                    "OVERRIDE_HEMS_MODE"
+                  ]
+                },
+                "schedule": {
+                  "$ref": "#/definitions/schedule"
+                },
+                "energy": {
+                  "type": "number",
+                  "description": "Amount of energy to be delivered during the charging period in watt-hours (Wh)"
+                },
+                "chargeDuration": {
+                  "type": "string",
+                  "description": "Optional parameter that indicates the intended duration of the charging session in ISO-8601 date format (e.g., 'PT2H') (only applicable for START_CHARGING)"
+                },
+                "hvacTargetTemperature": {
+                  "type": "number",
+                  "description": "Desired set temperature in degrees Celsius"
+                },
+                "waterHeatingTargetTemperature": {
+                  "type": "number",
+                  "description": "Desired set temperature for water in degrees Celsius"
+                },
+                "hvacMode": {
+                  "type": "string",
+                  "enum": [
+                    "HEATING",
+                    "COOLING",
+                    "OFF"
+                  ],
+                  "description": "Desired mode of the HVAC system"
+                },
+                "waterHeatingMode": {
+                  "type": "string",
+                  "enum": [
+                    "HEATING",
+                    "OFF"
+                  ],
+                  "description": "Desired mode of the water heating system"
+                },
+                "thermostatMode": {
+                  "type": "string",
+                  "enum": [
+                    "COOLING",
+                    "HEATING",
+                    "AUTO",
+                    "OFF"
+                  ],
+                  "description": "Preferred operational mode for the thermostat system"
+                },
+                "hemsMode": {
+                  "type": "string",
+                  "enum": [
+                    "ECONOMY",
+                    "STANDARD",
+                    "PEAK",
+                    "RENEWABLE"
+                  ],
+                  "description": "Preferred operational mode for the thermostat system"
+                },
+                "hvacFanSpeed": {
+                  "type": "string",
+                  "enum": [
+                    "LOW",
+                    "MEDIUM",
+                    "HIGH"
+                  ],
+                  "description": "Optional parameter to define the fan speed. If not specified, the default fan speed setting will be used."
+                },
+                "duration": {
+                  "type": "string",
+                  "description": "Optional parameter indicating the duration for which the command should be enacted in ISO-8601 duration format (e.g., 'PT2H'). If not specified, the changes will remain until manually adjusted."
+                },
+                "heatingSchedule": {
+                  "type": "object",
+                  "description": "Optional field to stipulate a heating schedule",
+                  "properties": {
+                    "startTime": {
+                      "type": "string",
+                      "description": "Start time rendered in HH:mm format, such as '06:00'"
+                    },
+                    "endTime": {
+                      "type": "string",
+                      "description": "End time rendered in HH:mm format, such as '06:00'"
+                    }
+                  }
+                },
+                "thermostatSchedule": {
+                  "type": "object",
+                  "description": "Optional field to outline a thermostat operating schedule",
+                  "properties": {
+                    "startTime": {
+                      "type": "string",
+                      "description": "Start time rendered in HH:mm format, such as '06:00'"
+                    },
+                    "endTime": {
+                      "type": "string",
+                      "description": "End time rendered in HH:mm format, such as '06:00'"
+                    }
+                  }
+                },
+                "priority": {
+                  "type": "number",
+                  "description": "Optional parameter signifying the priority of the DSR event, where 1 is the highest and 10 is the lowest. Helps devices gauge the sense of urgency."
+                },
+                "thresholdPercentage": {
+                  "type": "number",
+                  "description": "Optional parameter indicating the minimum solar generation percentage before the command is enacted. For instance, if set to 60%, the device will prioritize solar power when solar generation is 60% or higher."
+                },
+                "dischargeRate": {
+                  "type": "number",
+                  "description": "Optional parameter suggesting the rate of battery discharge in kilowatts (kW). If omitted, the default battery discharge rate will be applied."
+                },
+                "thresholdStateOfCharge": {
+                  "type": "number",
+                  "description": "Optional parameter showing the minimum State of Charge (SoC) percentage for enacting the command. E.g., if set at 20%, the device will tap into the battery only if its SoC exceeds 20%."
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request was successful, and the command has been executed as instructed."
+          },
+          "400": {
+            "description": "The request was invalid or could not be understood by the server. This might happen if a required parameter is missing or if a parameter is in an invalid format."
+          },
+          "403": {
+            "description": "The requester is not authorized to execute the specified command on the given device. This could happen if the request comes from an unauthorized third party."
+          },
+          "406": {
+            "description": "The specified device is not a charger (if commandType is START_CHARGING). This can occur if a device ID that does not correspond to a charger is provided."
+          },
+          "429": {
+            "description": "The requester has exceeded their rate limit for the commands endpoint. This could happen if an excessive number of requests are made in a short period."
+          },
+          "500": {
+            "description": "There was an internal server error while trying to process the request. This usually means that something has gone wrong on the server's side."
+          }
+        }
+      }
+    },
+    "/devices/{id}/boost": {
+      "post": {
+        "tags": [
+          "Device Management"
+        ],
+        "summary": "Sending a Charge Command",
+        "description": "This endpoint sends a charge command to the specified device to initiate a charging process. The charging process can be set to either normal or smart mode, with optional parameters for a target time and energy amount. The chargeDelayOverride property is available for specific energy suppliers that have obtained an exemption, allowing them to bypass smart energy regulation delays. Difference between the boost modes: A normal boost initiates a charge immediately, charging the device from any available energy source, prioritizing green energy and supplementing with grid power until the max charge limit. A smart boost aims to charge the plugged-in device with green energy until the target time, using grid power only when necessary to achieve the desired energy amount by the target time.Important note on the chargeDelayOverride property: This property is only available for specific energy suppliers who have provided an exemption letter confirming they can be trusted to bypass smart energy regulation delays safely. It is crucial to ensure that only authorized parties have access to this functionality to maintain compliance with energy regulations and ensure the system's safe operation.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Device ID of the specific device.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "Charge parameters",
+            "in": "body",
+            "description": "Body Parameters",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/deviceBoostParameters"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Device Management"
+        ],
+        "summary": "Sending a Cancel Boost Command",
+        "description": "This endpoint allows 3rd parties to send a cancel boost command to the specified device, effectively stopping the charging process initiated by the previous charge command. It is useful in situations where the 3rd party needs to terminate the ongoing charging process due to changes in energy requirements or availability.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Device ID of the specific device.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "Charge parameters",
+            "in": "body",
+            "description": "Body Parameters",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/deviceBoostParameters"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/devices/{id}/schedule": {
+      "get": {
+        "tags": [
+          "Charging Schedules"
+        ],
+        "summary": "Get Charge Schedule",
+        "description": "This endpoint allows 3rd parties to retrieve the charging schedule set for a specific device, providing insights into their planned charging periods and energy usage. This information can be useful for monitoring and adjusting the schedule to optimize energy consumption and costs.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Device ID of the specific device.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$ref": "#/definitions/chargingScheduleEndpoint"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Charging Schedules"
+        ],
+        "summary": "Delete a Charging Schedule",
+        "description": "This endpoint allows 3rd parties to delete a charging schedule set for a specific device, allowing them to modify or remove their energy management plans as needed.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Device ID of the specific device.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/webhooks/subscribe": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Webhook subscription",
+        "description": "This endpoint enables 3rd parties to halt the charging of a specific device immediately. This allows for effective management of energy usage and operational flexibility in scenarios where an ongoing charging session needs to be terminated prematurely.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Body parameters",
+            "in": "body",
+            "description": "Body Parameters",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/subscribeWebhookParameters"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Webhook was created successfully",
+            "schema": {
+              "properties": {
+                "webhookId": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks": {
+      "get": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "List active Webhooks",
+        "description": "This endpoint retrieves a list of all active webhook subscriptions, providing 3rd parties with an overview of their current event monitoring setup. The response will include essential webhook information such as webhook ID, event type, webhook URL, and associated device ID, allowing 3rd parties to manage and track their webhook subscriptions effectively.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "properties": {
+                "webhookId": {
+                  "type": "string"
+                },
+                "eventType": {
+                  "type": "string",
+                  "enum": [
+                    "status_change",
+                    "telemetry",
+                    "device_change"
+                  ]
+                },
+                "endpoint": {
+                  "type": "string"
+                },
+                "deviceId": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/{id}": {
+      "delete": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Unsubscribing",
+        "description": "This endpoint allows 3rd parties to unsubscribe from an active webhook, allowing them to stop receiving notifications for specific events when they are no longer needed or desired. Unsubscribing from a webhook can be useful when a 3rd party wants to reduce the number of notifications they receive or when monitoring certain events is no longer necessary.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "description": "Id of the specific webhook",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/devices/{deviceId}/telemetry": {
+      "post": {
+        "tags": [
+          "Telemetry"
+        ],
+        "summary": "Get telemetry data",
+        "description": "This endpoint allows EV Chargers to transmit real-time telemetry data for monitoring and analysis. It encompasses information about the current charging status, energy metrics, scheduling, and historical usage.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "type": "string",
+            "description": "ID corresponding to the device from which the telemetry data originates.",
+            "required": true
+          },
+          {
+            "name": "Request Body Parameters",
+            "in": "body",
+            "description": "Body Parameters",
+            "schema": {
+              "$ref": "#/definitions/deviceTelemetryEndpoint"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Telemetry data for EV Charger received successfully."
+                },
+                "timestamp": {
+                  "type": "string",
+                  "example": "2023-08-23T14:30:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Invalid or missing data fields in the telemetry data."
+                },
+                "timestamp": {
+                  "type": "string",
+                  "example": "2023-08-23T14:35:00Z"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/locations": {
+      "get": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "Listing Available Locations.",
+        "description": "This endpoint retrieves a comprehensive list of devices associated with the authenticated user's account. The response includes essential device information such as ID, type, model, and status, giving users a clear overview of their devices' details and current state. This API now includes location-based segregation, allowing users to manage their devices more effectively when they have devices across multiple locations. Each location has its own ID, name, and optional grid limit, and the devices within the location are listed under the location details.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "properties": {
+                "locations": {
+                  "type": "object",
+                  "properties": {
+                    "locationId": {
+                      "type": "string",
+                      "description": "Unique identifier for each location"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "Custom name given to the location by the user, allowing for easy identification and management"
+                    },
+                    "gridLimit": {
+                      "type": "string",
+                      "description": "The maximum power that can be delivered through the grid in watts (W)"
+                    },
+                    "devices": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The devices that's belongs under that location"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "Create Location",
+        "description": "This endpoint allows users to create a new location. The location represents a grouping of devices associated with a specific area, enabling users to organize and manage their devices effectively, especially when they have devices across multiple locations.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Request Body",
+            "in": "body",
+            "description": "Body Parameters",
+            "required": true,
+            "schema": {
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "gridLimit": {
+                  "type": "number"
+                },
+                "devices": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "properties": {
+                "locations": {
+                  "type": "object",
+                  "properties": {
+                    "locationId": {
+                      "type": "string",
+                      "description": "Unique identifier for each location"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/location/{locationId}": {
+      "get": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "Get Location",
+        "description": "By sending a GET request to this endpoint with the desired location ID, users can retrieve the location's details, including its name, grid limit (if applicable), and the devices associated with the location. **Description**: This endpoint allows users to retrieve a specific location based on the provided location ID. The location represents a grouping of devices associated with a specific area, enabling users to organize and manage their devices effectively, especially when they have devices across multiple locations.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "locationId",
+            "in": "path",
+            "description": "The unique identifier of the location to be retrieved.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The location was successfully retrieved, and the response includes the location object.",
+            "schema": {
+              "properties": {
+                "locationId": {
+                  "type": "string",
+                  "description": "Unique identifier for each location"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Custom name given to the location by the user, allowing for easy identification and management"
+                },
+                "gridLimit": {
+                  "type": "string",
+                  "description": "The maximum power that can be delivered through the grid in watts (W)"
+                },
+                "devices": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The devices that's belongs under that location"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "Get Location",
+        "description": "By sending a PUT request to this endpoint with the desired updates, users can modify the specified location's name, grid limit, and associated devices. The **`locationId`** parameter in the endpoint path should be replaced with the unique identifier of the location that needs to be updated. **Description**: This endpoint allows users to update an existing location. The location represents a grouping of devices associated with a specific area, enabling users to organize and manage their devices effectively, especially when they have devices across multiple locations.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "locationId",
+            "description": "DEvice id",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "body",
+            "name": "Body",
+            "description": "Body Parameters",
+            "schema": {
+              "$ref": "#/definitions/deviceLocationSchema"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The location was successfully retrieved, and the response includes the location object.",
+            "schema": {
+              "properties": {
+                "locationId": {
+                  "type": "string",
+                  "description": "Unique identifier for each location"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Custom name given to the location by the user, allowing for easy identification and management"
+                },
+                "gridLimit": {
+                  "type": "string",
+                  "description": "The maximum power that can be delivered through the grid in watts (W)"
+                },
+                "devices": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The devices that's belongs under that location"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "Delete Location",
+        "description": "By sending a DELETE request to this endpoint with the desired location ID, users can remove the location and its associated devices. Deleting a location will also remove any associations and configurations related to that location. **Description**: This endpoint allows users to delete a specific location on the provided location ID. The location represents a grouping of devices associated with a specific area, enabling users to organize and manage their devices effectively, especially when they have devices across multiple locations.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "locationId",
+            "description": "Device id",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The location was successfully deleted."
+          },
+          "401": {
+            "description": "The user is not authenticated."
+          },
+          "403": {
+            "description": "The user does not have permission to delete the location."
+          },
+          "404": {
+            "description": "The specified location ID does not exist."
+          },
+          "500": {
+            "description": "An error occurred on the server."
+          }
+        }
+      }
+    },
+    "/location/{locationId}/devices": {
+      "post": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "Adding (Register) Device to a Location",
+        "description": "This endpoint enables users to register (add) existing devices to a specific location. By associating multiple devices with a particular location, users can effectively manage and monitor their energy-related equipment in distinct areas.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "locationId",
+            "description": "Id of the specified location",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "body",
+            "name": "Body",
+            "description": "Body Parameters",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Upon successful registration of the devices to the location, the response will be empty with no content returned."
+          },
+          "400": {
+            "description": "The request parameters or body were invalid or missing."
+          },
+          "401": {
+            "description": "The user is not authenticated."
+          },
+          "403": {
+            "description": "The user does not have permission to register devices to the location."
+          },
+          "404": {
+            "description": "The specified location ID or one or more device IDs do not exist."
+          },
+          "500": {
+            "description": "An error occurred on the server."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "Remove (Unregister) Device from a Location",
+        "description": "This endpoint enables users to remove (unregister) existing devices from a specific location. By disassociating devices from a particular location, users can effectively manage their energy-related equipment across different locations.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "locationId",
+            "description": "Id of the specified location",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "body",
+            "name": "Body",
+            "description": "Body Parameters",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Upon successful registration of the devices to the location, the response will be empty with no content returned."
+          },
+          "400": {
+            "description": "The request parameters or body were invalid or missing."
+          },
+          "401": {
+            "description": "The user is not authenticated."
+          },
+          "403": {
+            "description": "The user does not have permission to register devices to the location."
+          },
+          "404": {
+            "description": "The specified location ID or one or more device IDs do not exist."
+          },
+          "500": {
+            "description": "An error occurred on the server."
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "Get Location devices",
+        "description": "This endpoint retrieves the list of devices associated with a specific location identified by the provided location ID. The response includes essential device information such as ID, type, model, and status, giving users a clear overview of the devices' details and current state within the specified location.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "locationId",
+            "description": "Id of the specified location",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "body",
+            "name": "Body",
+            "description": "Body Parameters",
+            "schema": {
+              "properties": {
+                "devices": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/device"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The list of devices associated with the specified location was successfully retrieved."
+          },
+          "401": {
+            "description": "The user is not authenticated."
+          },
+          "403": {
+            "description": "The user does not have permission to access devices for the location."
+          },
+          "404": {
+            "description": "The specified location ID does not exist."
+          },
+          "500": {
+            "description": "An error occurred on the server."
+          }
+        }
+      }
+    },
+    "/location/{locationId}/commands": {
+      "post": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "Send Charge Commands",
+        "description": "This endpoint allows 3rd parties to execute various commands at a specific location. The commandType field in the request body will define the type of command to be executed.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "locationId",
+            "description": "Id of the specified location",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "body",
+            "name": "Body",
+            "description": "Body Parameters",
+            "schema": {
+              "required": [
+                "commandType"
+              ],
+              "properties": {
+                "commandType": {
+                  "type": "string",
+                  "enum": [
+                    "STOP_CHARGING",
+                    "SET_CHARGING_SCHEDULE",
+                    "DEACTIVATE_NON_ESSENTIAL_LOADS",
+                    "USE_SOLAR_POWER",
+                    "USE_BATTERY_STORAGE",
+                    "OVERRIDE_HEMS_MODE"
+                  ]
+                },
+                "schedule": {
+                  "$ref": "#/definitions/schedule"
+                },
+                "duration": {
+                  "type": "string"
+                },
+                "priority": {
+                  "type": "number"
+                },
+                "thresholdPercentage": {
+                  "type": "number"
+                },
+                "dischargeRate": {
+                  "type": "number"
+                },
+                "thresholdStateOfCharge": {
+                  "type": "number"
+                },
+                "hemsMode": {
+                  "type": "string",
+                  "enum": [
+                    "ECONOMY",
+                    "STANDARD",
+                    "PEAK",
+                    "RENEWABLE"
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Upon successful registration of the devices to the location, the response will be empty with no content returned."
+          },
+          "400": {
+            "description": "The request parameters or body were invalid or missing."
+          },
+          "401": {
+            "description": "The user is not authenticated."
+          },
+          "403": {
+            "description": "The user does not have permission to register devices to the location."
+          },
+          "404": {
+            "description": "The specified location ID or one or more device IDs do not exist."
+          },
+          "500": {
+            "description": "An error occurred on the server."
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "Get Location devices",
+        "description": "This endpoint retrieves the list of devices associated with a specific location identified by the provided location ID. The response includes essential device information such as ID, type, model, and status, giving users a clear overview of the devices' details and current state within the specified location.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "locationId",
+            "description": "Id of the specified location",
+            "type": "string",
+            "required": true
+          },
+          {
+            "in": "body",
+            "name": "Body",
+            "description": "Body Parameters",
+            "schema": {
+              "properties": {
+                "devices": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/device"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The list of devices associated with the specified location was successfully retrieved."
+          },
+          "401": {
+            "description": "The user is not authenticated."
+          },
+          "403": {
+            "description": "The user does not have permission to access devices for the location."
+          },
+          "404": {
+            "description": "The specified location ID does not exist."
+          },
+          "500": {
+            "description": "An error occurred on the server."
+          }
+        }
+      }
+    },
+    "/location/{locationId}/chargers/schedule": {
+      "delete": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "Deleting a Charging Schedule",
+        "description": "This endpoint allows 3rd parties to delete an existing charging schedule for a specific location. This feature is important for adjusting energy usage based on changes in the user's needs and preferences. Once deleted, the device will revert to its default charging schedule unless a new one is set.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "locationId",
+            "description": "The unique identifier of the location for which devices' schedule needs to be deleted.",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The charging schedule was successfully deleted."
+          },
+          "400": {
+            "description": "The request parameters were invalid or missing."
+          },
+          "401": {
+            "description": "The user is not authenticated or does not have permission to delete the charging schedule."
+          },
+          "403": {
+            "description": "The user does not have permission to delete the charging schedule for the location."
+          },
+          "404": {
+            "description": "The specified location ID does not exist or no schedule exists for the given location."
+          },
+          "406": {
+            "description": "The specified location does not have any chargers. This can occur if a location ID that does not have associated chargers is provided."
+          },
+          "500": {
+            "description": "An error occurred on the server."
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Locations"
+        ],
+        "summary": "Get a Charging Schedule",
+        "description": "This endpoint allows 3rd parties to retrieve a set charging schedule for a specific device. This is essential for tracking energy usage and confirming the settings that are in place. The response will include details of the schedule, such as start time, end time, and the amount of energy to be delivered during the charging period.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "locationId",
+            "description": "Id of the specified location",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The list of devices associated with the specified location was successfully retrieved.",
+            "schema": {
+              "$ref": "#/definitions/schedule"
+            }
+          },
+          "400": {
+            "description": "The request parameters were invalid or missing."
+          },
+          "401": {
+            "description": "The user is not authenticated or does not have permission to retrieve the charging schedule."
+          },
+          "403": {
+            "description": "The user does not have permission to retrieve the charging schedule for the location."
+          },
+          "404": {
+            "description": "The specified location ID does not exist."
+          },
+          "406": {
+            "description": "The specified location does not have any chargers. This can occur if a location ID that does not have associated chargers is provided."
+          },
+          "500": {
+            "description": "An error occurred on the server."
+          }
+        }
+      }
+    },
+    "/user/{userId}": {
+      "post": {
+        "tags": [
+          "User management"
+        ],
+        "summary": "Link User",
+        "description": "This endpoint enables administrators or authorized users to link another user. By linking users, administrators can grant access and permissions to the EMS system, allowing the linked users to monitor and manage devices and locations.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "description": "The unique identifier of the user",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The user was successfully linked to the EMS account."
+          },
+          "400": {
+            "description": "The request parameters or body were invalid or missing."
+          },
+          "401": {
+            "description": "The user is not authenticated or does not have permission to link users."
+          },
+          "403": {
+            "description": "The user does not have permission to link users."
+          },
+          "500": {
+            "description": "An error occurred on the server."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "User management"
+        ],
+        "summary": "Unlink User",
+        "description": "This endpoint enables administrators or authorized users to unlink a user. By unlinking users, administrators can revoke access and permissions to the EMS system, preventing the unlinked users from accessing devices and locations.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "description": "The unique identifier of the user",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The user was successfully linked to the EMS account."
+          },
+          "400": {
+            "description": "The request parameters or body were invalid or missing."
+          },
+          "401": {
+            "description": "The user is not authenticated or does not have permission to link users."
+          },
+          "403": {
+            "description": "The user does not have permission to link users."
+          },
+          "500": {
+            "description": "An error occurred on the server."
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "User management"
+        ],
+        "summary": "Get User",
+        "description": "This endpoint enables administrators or authorized users to retrieve information about a user. By querying this endpoint with a user's unique identifier (user ID), administrators can access the user's details.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "description": "The unique identifier of the user",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The user details were successfully retrieved.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "userId": {
+                  "type": "string",
+                  "example": "user123"
+                },
+                "name": {
+                  "type": "string",
+                  "example": "John Doe"
+                },
+                "email": {
+                  "type": "string",
+                  "example": "john.doe@exmaple.com"
+                },
+                "linked": {
+                  "type": "string",
+                  "example": "john.doe@exmaple.com"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The user is not authenticated or does not have permission to retrieve user details."
+          },
+          "403": {
+            "description": "The user does not have permission to retrieve user details."
+          },
+          "404": {
+            "description": "The specified user ID does not exist or is not associated with the EMS account."
+          },
+          "500": {
+            "description": "An error occurred on the server."
+          }
+        }
+      }
+    },
+    "/users/{userId}/locations": {
+      "get": {
+        "tags": [
+          "User management"
+        ],
+        "summary": "Get user locations",
+        "description": "This endpoint allows administrators or authorized users to retrieve the list of location IDs associated with a specific user. By querying this endpoint with the user's unique identifier (user ID), administrators can access the location IDs to which the user has access.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "description": "The unique identifier of the user",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The user details were successfully retrieved.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "locations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "example": [
+                      "location123",
+                      "location456",
+                      "location789"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The user is not authenticated or does not have permission to access user information."
+          },
+          "403": {
+            "description": "The user does not have permission to access user information."
+          },
+          "404": {
+            "description": "The specified user ID does not exist or is not associated with the EMS account."
+          },
+          "500": {
+            "description": "An error occurred on the server."
+          }
+        }
+      }
+    },
+    "/users/{userId}/devices": {
+      "get": {
+        "tags": [
+          "User management"
+        ],
+        "summary": "Get user locations",
+        "description": "This endpoint enables administrators or authorized users to retrieve the list of device IDs associated with a specific user. By querying this endpoint with the user's unique identifier (user ID), administrators can access the device IDs that are connected to the user.",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "description": "The unique identifier of the user for whom device IDs need to be retrieved.",
+            "type": "string",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The list of device IDs associated with the specified user was successfully retrieved.",
+            "schema": {
+              "properties": {
+                "devices": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/device"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The user is not authenticated or does not have permission to access user information."
+          },
+          "403": {
+            "description": "The user does not have permission to access user information."
+          },
+          "404": {
+            "description": "The specified user ID does not exist or is not associated with any devices."
+          },
+          "500": {
+            "description": "An error occurred on the server."
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "site": {
+      "type": "object",
+      "properties": {
+        "sites": {
+          "type": "object",
+          "properties": {
+            "siteId": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "gridLimit?": {
+              "type": "number"
+            },
+            "devices": {
+              "type": "object",
+              "properties": {
+                "deviceId": {
+                  "type": "string"
+                },
+                "deviceType": {
+                  "type": "string",
+                  "enum": [
+                    "vehicle_charger",
+                    "diverter",
+                    "battery",
+                    "hvac",
+                    "solar_inverter",
+                    "other"
+                  ]
+                },
+                "vendor": {
+                  "type": "string"
+                },
+                "model": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "alias": {
+                  "type": "string"
+                },
+                "status": {
+                  "$ref": "#/definitions/deviceStatus"
+                },
+                "powerLimit": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "device": {
+      "type": "object",
+      "properties": {
+        "deviceId": {
+          "type": "string"
+        },
+        "deviceType": {
+          "type": "string",
+          "enum": [
+            "vehicle_charger",
+            "diverter",
+            "battery",
+            "hvac",
+            "solar_inverter",
+            "other"
+          ]
+        },
+        "vendor": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "alias": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/deviceStatus"
+        },
+        "powerLimit": {
+          "type": "number"
+        }
+      }
+    },
+    "deviceStatusEndpoint": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/deviceStatus"
+        },
+        "state": {
+          "$ref": "#/definitions/deviceState"
+        },
+        "supplyMode": {
+          "$ref": "#/definitions/deviceSupplyMode"
+        },
+        "actualPower": {
+          "type": "number"
+        },
+        "gridPower": {
+          "type": "number"
+        },
+        "averagePower": {
+          "type": "number"
+        },
+        "interval": {
+          "type": "number"
+        },
+        "energyDelivered": {
+          "type": "number"
+        },
+        "sessionEnergy": {
+          "type": "number"
+        },
+        "boostCharge": {
+          "type": "boolean"
+        },
+        "faultType": {
+          "type": "string"
+        }
+      }
+    },
+    "chargingScheduleEndpoint": {
+      "type": "object",
+      "required": [
+        "startTime",
+        "endTime",
+        "energy"
+      ],
+      "properties": {
+        "mode": {
+          "$ref": "#/definitions/deviceChargeMode"
+        },
+        "chargeDelayOverride": {
+          "type": "boolean"
+        },
+        "schedule": {
+          "type": "object",
+          "properties": {
+            "startTime": {
+              "type": "string"
+            },
+            "endTime": {
+              "type": "string"
+            },
+            "energy": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "deviceBoostParameters": {
+      "type": "object",
+      "required": [
+        "mode",
+        "energy"
+      ],
+      "properties": {
+        "mode": {
+          "$ref": "#/definitions/deviceChargeMode"
+        },
+        "parameters": {
+          "$ref": "#/definitions/deviceChargeParameters"
+        },
+        "chargeDelayOverride": {
+          "type": "boolean"
+        }
+      }
+    },
+    "deviceStatus": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "faulted"
+      ]
+    },
+    "deviceState": {
+      "type": "string",
+      "enum": [
+        "no_vehicle",
+        "waiting_for_surplus",
+        "charging",
+        "complete",
+        "faulted"
+      ]
+    },
+    "deviceSupplyMode": {
+      "type": "string",
+      "enum": [
+        "green-preferred",
+        "green-only",
+        "schedule",
+        "fast",
+        "stop"
+      ]
+    },
+    "deviceChargeMode": {
+      "type": "string",
+      "enum": [
+        "normal",
+        "smart"
+      ]
+    },
+    "deviceChargeParameters": {
+      "type": "object",
+      "required": [
+        "energy"
+      ],
+      "properties": {
+        "targetTime": {
+          "type": "string",
+          "description": "required when the mode is set to 'smart', represents the desired completion time for the charging process in ISO-8601 format (e.g., 2023-05-10T14:48:00.000Z)"
+        },
+        "energy": {
+          "type": "number",
+          "description": "Amount of energy to be delivered during the charging process in watt-hours (Wh)"
+        }
+      }
+    },
+    "deviceStartChargeParameters": {
+      "type": "object",
+      "required": [
+        "energy"
+      ],
+      "properties": {
+        "energy": {
+          "type": "number",
+          "description": "Amount of energy to be delivered during the charging process in watt-hours (Wh)"
+        },
+        "chargeDuration": {
+          "type": "string",
+          "description": "Optional parameter that indicates the intended duration of the charging session in ISO-8601 date format (e.g., 'PT2H') representing a period of 2 hours"
+        }
+      }
+    },
+    "subscribeWebhookParameters": {
+      "type": "object",
+      "required": [
+        "eventType",
+        "endpoint",
+        "deviceId"
+      ],
+      "properties": {
+        "eventType": {
+          "type": "string",
+          "description": "Type of event that occurred: state_change (triggers whenever a device state changes), telemetry (triggers whenever there is a data update from the device), or device_change (triggers when a device is removed or a new one is added)",
+          "enum": [
+            "state_change",
+            "telemetry",
+            "device_change"
+          ]
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "The URL to receive the webhook notification when the event occurs"
+        },
+        "deviceId": {
+          "type": "string",
+          "description": "Unique identifier for the device associated with the event"
+        }
+      }
+    },
+    "deviceTelemetryEndpoint": {
+      "type": "object",
+      "required": [
+        "eventType",
+        "endpoint",
+        "deviceId"
+      ],
+      "properties": {
+        "deviceType": {
+          "type": "string",
+          "description": "Specifies the type of device sending the telemetry. For this endpoint, it will always be 'EV_CHARGER'.",
+          "example": "EV_CHARGER"
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the EV Charger. Possible values include 'Charging', 'Standby', 'Error', etc.",
+          "example": "Charging"
+        },
+        "chargingRate": {
+          "type": "number",
+          "description": "The power currently being drawn by the charger in kW or the kWh consumed over a period.",
+          "example": "3.7"
+        },
+        "duration": {
+          "type": "string",
+          "description": "Time since the start of the current charge in ISO-8601 duration format.",
+          "example": "PT2H"
+        },
+        "temperature": {
+          "type": "object",
+          "description": "Contains internal and (optionally) external temperature readings.",
+          "properties": {
+            "internal": {
+              "type": "number",
+              "description": "Internal temperature in Celsius.",
+              "example": "45"
+            },
+            "external": {
+              "type": "number",
+              "description": "External temperature in Celsius, if available.",
+              "example": "22"
+            }
+          }
+        },
+        "scheduledChargingTimes": {
+          "type": "object",
+          "description": "Specifies when the charger is set to start and stop charging.",
+          "properties": {
+            "start": {
+              "type": "string",
+              "description": "Scheduled start time for charging.",
+              "example": "15:00"
+            },
+            "end": {
+              "type": "string",
+              "description": "Scheduled end time for charging.",
+              "example": "07:00"
+            }
+          }
+        },
+        "history": {
+          "type": "object",
+          "description": "Details of past charging sessions.",
+          "properties": {
+            "sessions": {
+              "type": "number",
+              "description": "Total number of past charging sessions.",
+              "example": "132"
+            },
+            "totalDuration": {
+              "type": "string",
+              "description": "Cumulative time of all past sessions, in ISO-8601 duration format.",
+              "example": "P3D"
+            },
+            "totalEnergy": {
+              "type": "number",
+              "description": "Total energy consumed across all past sessions in kWh.",
+              "example": "120.5"
+            }
+          }
+        }
+      }
+    },
+    "deviceLocationSchema": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "gridLimit": {
+          "type": "number"
+        },
+        "devices": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "schedule": {
+      "type": "object",
+      "properties": {
+        "chargeDelayOverride": {
+          "description": "Indicates if the 3rd party has overridden the random charge delay required by regulations.",
+          "type": "boolean"
+        },
+        "schedule": {
+          "type": "object",
+          "properties": {
+            "startTime": {
+              "description": "Start time of the charging period in ISO-8601 date format.",
+              "type": "string"
+            },
+            "endTime": {
+              "description": "End time of the charging period in ISO-8601 date format.",
+              "type": "string"
+            },
+            "energy": {
+              "description": "Amount of energy to be delivered during the charging period in watt-hours (Wh).",
+              "type": "number"
+            }
+          }
+        }
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "Find out more about Swagger",
+    "url": "http://swagger.io"
+  }
+}
