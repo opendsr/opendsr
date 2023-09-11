@@ -462,7 +462,7 @@
           "Telemetry"
         ],
         "summary": "Get telemetry data",
-        "description": "This endpoint allows EV Chargers to transmit real-time telemetry data for monitoring and analysis. It encompasses information about the current charging status, energy metrics, scheduling, and historical usage.",
+        "description": "This endpoint allows devices to transmit real-time telemetry data for monitoring and analysis. <br><br>  **Device types** <br><br> `HVAC_SYSTEM`: Allows HVAC systems to transmit real-time telemetry data for monitoring, control, and analysis. It covers information about the current operational status, temperature metrics, mode, fan speed, energy consumption, and maintenance alerts. <br><br> `WATER_HEATER`: Allows Water Heaters to transmit real-time telemetry data for monitoring, control, and analysis. It covers information about the current heating status, temperature metrics, status of the heating element, energy consumption, and water usage. <br><br> `THERMOSTAT`: Allows Thermostats to transmit real-time telemetry data for monitoring, control, and analysis. It encompasses details about the current heating or cooling status, room temperature, setpoint temperature, current humidity, and heating/cooling schedules. <br><br> `BATTERY_STORAGE`: Allows Battery Storage devices to transmit real-time telemetry data for monitoring, control, and analysis. It provides details about the charge status, total capacity, available energy, rate of energy input/output, number of charge cycles, internal temperature, and estimated battery health. <br><br> `SOLAR_INVERTER`: Permits Solar Inverters to send real-time telemetry data for monitoring, control, and analysis. It encompasses information about the operational status, power generation rate, total energy produced, DC and AC metrics, conversion efficiency, internal temperature, and sunlight intensity (if applicable).",
         "consumes": [
           "multipart/form-data"
         ],
@@ -493,7 +493,7 @@
               "properties": {
                 "message": {
                   "type": "string",
-                  "example": "Telemetry data for EV Charger received successfully."
+                  "example": "Telemetry data for {deviceType} received successfully."
                 },
                 "timestamp": {
                   "type": "string",
@@ -705,7 +705,7 @@
         "tags": [
           "Locations"
         ],
-        "summary": "Get Location",
+        "summary": "Update Location",
         "description": "This endpoint allows users to update an existing location. The location represents a grouping of devices associated with a specific area, enabling users to organize and manage their devices effectively, especially when they have devices across multiple locations.",
         "consumes": [
           "multipart/form-data"
@@ -1377,7 +1377,7 @@
         "tags": [
           "User management"
         ],
-        "summary": "Get user locations",
+        "summary": "Get user devices",
         "description": "This endpoint enables administrators or authorized users to retrieve the list of device IDs associated with a specific user. By querying this endpoint with the user's unique identifier (user ID), administrators can access the device IDs that are connected to the user.",
         "consumes": [
           "multipart/form-data"
@@ -1687,83 +1687,189 @@
     "deviceTelemetryEndpoint": {
       "type": "object",
       "required": [
-        "eventType",
-        "endpoint",
-        "deviceId"
+        "deviceType"
       ],
       "properties": {
         "deviceType": {
           "type": "string",
-          "description": "Specifies the type of device sending the telemetry. For this endpoint, it will always be 'EV_CHARGER'.",
-          "example": "EV_CHARGER"
+          "description": "Specifies the type of device sending the telemetry.",
+          "enum": ["HVAC_SYSTEM", "WATER_HEATER", "THERMOSTAT", "BATTERY_STORAGE", "SOLAR_INVERTER"]
         },
-        "status": {
+        "hvacStatus": {
           "type": "string",
-          "description": "Current status of the EV Charger. Possible values include 'Charging', 'Standby', 'Error', etc.",
-          "example": "Charging"
+          "description": "Current operational status of the HVAC system. <br><br> Required for `deviceType: 'HVAC_SYSTEM'`",
+          "enum": ["On", "Off", "Heating", "Cooling", "Ventilating"]
         },
-        "chargingRate": {
+        "thermostatStatus": {
+          "type": "string",
+          "description": "Current operational status of the Thermostat. <br><br> Required for `deviceType: 'THERMOSTAT'`",
+          "enum": ["Heating", "Cooling", "Standby", "Error"]
+        },
+        "waterHeaterStatus": {
+          "type": "string",
+          "description": "Current operational status of the Water Heater. <br><br> Required for `deviceType: 'WATER_HEATER'`",
+          "enum": ["Heating", "Standby", "Error"]
+        },
+        "solarInverterStatus": {
+          "type": "string",
+          "description": "Current operational status of the solar inverter. <br><br> Required for `deviceType: 'SOLAR_INVERTER'`",
+          "enum": ["Operating", "Standby", "Error"]
+        },
+        "chargeStatus": {
+          "type": "string",
+          "description": "Current charging status of the battery. <br><br> Required for `deviceType: 'BATTERY_STORAGE'`",
+          "enum": ["Charging", "Discharging", "Standby"]
+        },
+        "hvacCurrentTemperature": {
           "type": "number",
-          "description": "The power currently being drawn by the charger in kW or the kWh consumed over a period.",
-          "example": "3.7"
+          "description": "Present room temperature or the desired setting in Celsius. <br><br> Required for `deviceType: 'HVAC_SYSTEM'`"
         },
-        "duration": {
+        "waterHeaterCurrentTemperature": {
+          "type": "number",
+          "description": "Present temperature of the water in Celsius. <br><br> Required for `deviceType: 'WATER_HEATER'`"
+        },
+        "currentRoomTemperature": {
+          "type": "number",
+          "description": "Real-time ambient room temperature in Celsius. <br><br> Required for `deviceType: 'THERMOSTAT'`"
+        },
+        "batteryTemperature": {
+          "type": "number",
+          "description": "Real-time internal battery temperature in Celsius. <br><br> Required for `deviceType: 'BATTERY_STORAGE'`"
+        },
+        "batteryHealth": {
+          "type": "number",
+          "description": "Estimated lifespan or health percentage of the battery (0-100). <br><br> Required for `deviceType: 'BATTERY_STORAGE'`"
+        },
+        "hvacSetpoint": {
+          "type": "number",
+          "description": "Desired temperature settings for heating or cooling in Celsius. <br><br> Required for `deviceType: 'HVAC_SYSTEM'`"
+        },
+        "thermostatSetpoint": {
+          "type": "number",
+          "description": "Desired room temperature setting in Celsius. <br><br> Required for `deviceType: 'THERMOSTAT'`"
+        },
+        "waterHeaterSetpoint": {
+          "type": "number",
+          "description": "Desired water temperature setting in Celsius. <br><br> Required for `deviceType: 'WATER_HEATER'`"
+        },
+        "capacity": {
+          "type": "number",
+          "description": "Total battery storage capacity measured in kWh. <br><br> Required for `deviceType: 'BATTERY_STORAGE'`"
+        },
+        "heatingElementStatus": {
           "type": "string",
-          "description": "Time since the start of the current charge in ISO-8601 duration format.",
-          "example": "PT2H"
+          "description": "Operational status of the heating element. <br><br> Required for `deviceType: 'WATER_HEATER'`",
+          "enum": ["Working", "Error", "Efficiency"]
         },
-        "temperature": {
+        "hvacMode": {
+          "type": "string",
+          "description": "Operational mode of the HVAC system. <br><br> Required for `deviceType: 'HVAC_SYSTEM'`",
+          "enum": ["Heating", "Cooling", "Auto", "Fan Only"]
+        },
+        "hvacFanSpeed": {
+          "type": "string",
+          "description": "Speed of the HVAC system fan. <br><br> Required for `deviceType: 'HVAC_SYSTEM'`",
+          "enum": ["Low", "Medium", "High"]
+        },
+        "hvacEnergyUsage": {
+          "type": "number",
+          "description": "Total energy consumed by the HVAC system in kWh. <br><br> Required for `deviceType: 'HVAC_SYSTEM'`"
+        },
+        "waterHeaterEnergyUsage": {
+          "type": "number",
+          "description": "Total energy consumed by the Water Heater in kWh. <br><br> Required for `deviceType: 'WATER_HEATER'`"
+        },
+        "availableEnergy": {
+          "type": "number",
+          "description": "The amount of energy currently available for use, measured in kWh. <br><br> Required for `deviceType: 'BATTERY_STORAGE'`"
+        },
+        "inputOutputRate": {
+          "type": "number",
+          "description": "Rate at which energy is being charged or discharged, measured in kW. <br><br> Required for `deviceType: 'BATTERY_STORAGE'`"
+        },
+        "chargeCycles": {
+          "type": "number",
+          "description": "Total number of complete charge and discharge cycles the battery has undergone. <br><br> Required for `deviceType: 'BATTERY_STORAGE'`"
+        },
+        "waterUsage": {
+          "type": "number",
+          "description": "Amount of water used or heated, specified in litres or gallons. <br><br> Required for `deviceType: 'WATER_HEATER'`"
+        },
+        "hvacMaintenanceAlerts": {
+          "type": "string",
+          "description": "A list of maintenance alerts like filter change reminders, detected issues, etc. <br><br> Required for `deviceType: 'HVAC_SYSTEM'`"
+        },
+        "humidity": {
+          "type": "number",
+          "description": "Current indoor humidity level as a percentage (0-100). <br><br> Required for `deviceType: 'THERMOSTAT'`"
+        },
+        "heatingCoolingSchedule": {
           "type": "object",
-          "description": "Contains internal and (optionally) external temperature readings.",
+          "description": "Current indoor humidity level as a percentage (0-100). <br><br> Required for `deviceType: 'THERMOSTAT'`",
           "properties": {
-            "internal": {
-              "type": "number",
-              "description": "Internal temperature in Celsius.",
-              "example": "45"
+            "times": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "example": ["06:00", "12:00", "18:00"]
             },
-            "external": {
-              "type": "number",
-              "description": "External temperature in Celsius, if available.",
-              "example": "22"
+            "temperatures": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "example": [[20, 22, 18]]
             }
           }
         },
-        "scheduledChargingTimes": {
+        "generationRate": {
+          "type": "number",
+          "description": "Power currently being generated, measured in kW. <br><br> Required for `deviceType: 'SOLAR_INVERTER'`"
+        },
+        "totalEnergyProduced": {
+          "type": "number",
+          "description": "Total energy produced over a specified period, measured in kWh. <br><br> Required for `deviceType: 'SOLAR_INVERTER'`"
+        },
+        "dcInput": {
           "type": "object",
-          "description": "Specifies when the charger is set to start and stop charging.",
+          "description": "DC perational data about solar inverters. <br><br> Required for `deviceType: 'SOLAR_INVERTER'`",
           "properties": {
-            "start": {
-              "type": "string",
-              "description": "Scheduled start time for charging.",
-              "example": "15:00"
+            "voltage": {
+              "type": "number",
+              "description": "DC voltage input from solar panels, measured in volts."
             },
-            "end": {
-              "type": "string",
-              "description": "Scheduled end time for charging.",
-              "example": "07:00"
+            "current": {
+              "type": "number",
+              "description": "DC current input from solar panels, measured in amperes."
             }
           }
         },
-        "history": {
+        "acOutput": {
           "type": "object",
-          "description": "Details of past charging sessions.",
+          "description": "AC operational data about solar inverters. <br><br> Required for `deviceType: 'SOLAR_INVERTER'`",
           "properties": {
-            "sessions": {
+            "voltage": {
               "type": "number",
-              "description": "Total number of past charging sessions.",
-              "example": "132"
+              "description": "AC voltage output directed towards the grid or home, measured in volts."
             },
-            "totalDuration": {
-              "type": "string",
-              "description": "Cumulative time of all past sessions, in ISO-8601 duration format.",
-              "example": "P3D"
-            },
-            "totalEnergy": {
+            "current": {
               "type": "number",
-              "description": "Total energy consumed across all past sessions in kWh.",
-              "example": "120.5"
+              "description": "DC current input from solar panels, measured in amperes."
             }
           }
+        },
+        "efficiency": {
+          "type": "number",
+          "description": "Efficiency of the conversion process, represented as a percentage (0-100). <br><br> Required for `deviceType: 'SOLAR_INVERTER'`"
+        },
+        "solarInverterTemperature": {
+          "type": "number",
+          "description": "Real-time internal temperature of the solar inverter in Celsius. <br><br> Required for `deviceType: 'SOLAR_INVERTER'`"
+        },
+        "sunlightIntensity": {
+          "type": "number",
+          "description": "Intensity of sunlight captured by sensors, if available, measured in W/m^2. <br><br> Required for `deviceType: 'SOLAR_INVERTER'`"
         }
       }
     },
